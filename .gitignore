@@ -1,0 +1,41 @@
+# Environment
+.env
+
+# Generated outputs
+output/
+output/**/*
+!output/.gitkeep
+
+# Render cache
+cache/
+cache/**/*
+!cache/.gitkeep
+
+# Fonts (downloaded manually or via setup_fonts.py)
+fonts/
+fonts/**/*
+!fonts/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/

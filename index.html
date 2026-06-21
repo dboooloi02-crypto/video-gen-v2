@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Video Gen v2 — AI 英语学习视频</title>
+<style>
+/* ── Reset & Root ─────────────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07070e;--surface:#0f0f1d;--card:#131326;--border:#1e1e38;
+  --accent:#ffd044;--accent2:#4a9eff;--gold-dim:rgba(255,208,68,.12);
+  --text:#e4e4f0;--muted:#8888a8;--subtle:#3a3a58;
+  --green:#52c41a;--red:#ff4d4f;--blue:#4a9eff;
+  --radius:14px;--radius-sm:8px;
+  --shadow:0 4px 24px rgba(0,0,0,.5);
+  --transition:.18s ease;
+}
+body{background:var(--bg);color:var(--text);font-family:'PingFang SC',system-ui,-apple-system,sans-serif;
+  font-size:14px;line-height:1.6;min-height:100vh}
+button{cursor:pointer;border:none;background:none;font-family:inherit;font-size:inherit}
+input,textarea,select{font-family:inherit;font-size:inherit;color:var(--text)}
+a{color:var(--accent);text-decoration:none}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+#app{max-width:860px;margin:0 auto;padding:0 18px 60px}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+header{display:flex;align-items:center;justify-content:space-between;
+  padding:22px 0 18px;border-bottom:1px solid var(--border);margin-bottom:28px}
+.logo{font-size:20px;font-weight:600;letter-spacing:.02em}
+.logo span{color:var(--accent)}
+.logo em{color:var(--muted);font-size:12px;font-style:normal;margin-left:6px}
+.hdr-btns{display:flex;gap:10px;align-items:center}
+.hdr-btn{font-size:12px;padding:6px 14px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);color:var(--muted);transition:var(--transition)}
+.hdr-btn:hover{border-color:var(--accent);color:var(--accent)}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--red);
+  display:inline-block;margin-right:5px;transition:var(--transition)}
+.status-dot.ok{background:var(--green)}
+
+/* ── Section card ─────────────────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:22px 24px;margin-bottom:16px}
+.card-title{font-size:13px;font-weight:500;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:16px}
+
+/* ── Mode tabs ────────────────────────────────────────────────────────────── */
+.mode-tabs{display:flex;gap:6px;margin-bottom:16px;
+  background:var(--surface);padding:5px;border-radius:var(--radius);
+  border:1px solid var(--border)}
+.mode-tab{flex:1;padding:9px 0;border-radius:10px;font-size:13px;font-weight:500;
+  color:var(--muted);transition:var(--transition);text-align:center}
+.mode-tab.on{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+.mode-tab:hover:not(.on){color:var(--text)}
+
+/* ── Inputs ───────────────────────────────────────────────────────────────── */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500}
+.inp{width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:11px 14px;color:var(--text);
+  transition:var(--transition);outline:none}
+.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--gold-dim)}
+.inp::placeholder{color:var(--subtle)}
+textarea.inp{resize:vertical;min-height:90px;line-height:1.5;font-size:13px}
+.inp-row{display:flex;gap:10px}
+.inp-row .inp{flex:1}
+
+/* ── Mode panels ──────────────────────────────────────────────────────────── */
+.mode-panel{display:none}.mode-panel.on{display:block}
+
+/* ── Words builder (mixed mode) ───────────────────────────────────────────── */
+.word-row{display:grid;grid-template-columns:1fr 80px 1fr 32px;gap:8px;margin-bottom:8px}
+.word-row .inp{font-size:13px}
+.del-btn{width:32px;height:38px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);color:var(--muted);font-size:16px;
+  transition:var(--transition);margin-top:0}
+.del-btn:hover{border-color:var(--red);color:var(--red)}
+.add-word-btn{font-size:13px;color:var(--accent2);border:1px dashed var(--accent2);
+  border-radius:var(--radius-sm);padding:7px 14px;
+  background:rgba(74,158,255,.06);transition:var(--transition);margin-top:4px}
+.add-word-btn:hover{background:rgba(74,158,255,.12)}
+
+/* ── Template selector ────────────────────────────────────────────────────── */
+.template-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tpl-card{border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:10px;cursor:pointer;transition:var(--transition);position:relative}
+.tpl-card:hover{border-color:var(--subtle)}
+.tpl-card.on{border-color:var(--accent);background:var(--gold-dim)}
+.tpl-card.on::after{content:'✓';position:absolute;top:6px;right:8px;
+  color:var(--accent);font-size:11px;font-weight:700}
+.tpl-preview{height:70px;border-radius:6px;margin-bottom:8px;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;font-size:10px}
+.tpl-preview.dark{background:#07070e}
+.tpl-preview.light{background:#f5f5f5}
+.tpl-name{font-size:12px;font-weight:500;text-align:center}
+.tpl-desc{font-size:11px;color:var(--muted);text-align:center;margin-top:2px}
+
+/* Template mini visuals */
+.tv-el{display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px}
+.tv-zh{font-size:9px;color:#e4e4e4}.tv-sep{width:24px;height:.5px;background:#373750}
+.tv-kw{font-size:12px;font-weight:700;color:#ffd044;text-shadow:0 0 8px rgba(255,208,68,.5)}
+.tv-pod{display:flex;flex-direction:column;align-items:center;gap:4px}
+.tv-avs{display:flex;gap:10px}
+.tv-av{width:18px;height:18px;border-radius:50%;font-size:7px;
+  display:flex;align-items:center;justify-content:center;font-weight:700}
+.tv-wave{display:flex;align-items:flex-end;gap:2px;height:12px}
+.tv-bar{width:3px;border-radius:2px;background:#64b4ff}
+.tv-tt{display:flex;flex-direction:column;align-items:center;gap:3px}
+.tv-big{font-size:14px;font-weight:800;letter-spacing:.03em}
+.tv-mx{display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;padding:4px}
+.tv-card{background:#fff;border-radius:4px;padding:4px 6px;width:90%;font-size:9px}
+.tv-inline{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
+.tv-zh2{font-size:9px;color:#222}
+.tv-box{background:#ffd044;border-radius:3px;padding:1px 4px;font-size:9px;font-weight:700;color:#222}
+
+/* ── Voice selector ───────────────────────────────────────────────────────── */
+.voice-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.voice-chip{border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:9px 10px;cursor:pointer;transition:var(--transition)}
+.voice-chip:hover{border-color:var(--subtle)}
+.voice-chip.on{border-color:var(--accent);background:var(--gold-dim)}
+.voice-chip .vc-name{font-size:12px;font-weight:500}
+.voice-chip .vc-lang{font-size:11px;color:var(--muted);margin-top:1px}
+
+/* ── Generate button ──────────────────────────────────────────────────────── */
+.gen-btn{width:100%;padding:16px;border-radius:var(--radius);margin:18px 0 0;
+  background:linear-gradient(135deg,#ffd044,#ff9f00);
+  color:#111;font-size:16px;font-weight:700;letter-spacing:.02em;
+  box-shadow:0 4px 20px rgba(255,208,68,.3);transition:var(--transition);
+  display:flex;align-items:center;justify-content:center;gap:8px}
+.gen-btn:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(255,208,68,.4)}
+.gen-btn:active{transform:none}
+.gen-btn:disabled{background:var(--border);color:var(--muted);
+  box-shadow:none;cursor:not-allowed;transform:none}
+
+/* ── Output panel ─────────────────────────────────────────────────────────── */
+#output{display:none}
+.status-bar{display:flex;align-items:center;gap:10px;padding:14px 18px;
+  border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--border);
+  margin-bottom:14px}
+.spin{width:18px;height:18px;border:2px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;
+  animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status-txt{flex:1;font-size:13px}
+.elapsed{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:14px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#ff9f00);
+  border-radius:2px;transition:width .5s ease;width:0}
+
+/* video output */
+.video-box{border-radius:var(--radius);overflow:hidden;background:#000;
+  display:flex;align-items:center;justify-content:center;margin-bottom:14px;
+  border:1px solid var(--border)}
+.video-box video{max-width:100%;max-height:400px;display:block}
+.video-placeholder{padding:60px;color:var(--subtle);font-size:13px;text-align:center}
+.out-actions{display:flex;gap:10px}
+.action-btn{flex:1;padding:11px;border-radius:var(--radius-sm);font-size:13px;
+  font-weight:500;border:1px solid;transition:var(--transition)}
+.action-btn.primary{background:var(--accent);color:#111;border-color:var(--accent)}
+.action-btn.primary:hover{background:#ffda5e}
+.action-btn.secondary{border-color:var(--border);color:var(--muted)}
+.action-btn.secondary:hover{border-color:var(--text);color:var(--text)}
+.error-box{padding:14px;background:rgba(255,77,79,.1);border:1px solid rgba(255,77,79,.3);
+  border-radius:var(--radius-sm);color:var(--red);font-size:13px}
+
+/* ── History ──────────────────────────────────────────────────────────────── */
+.history-header{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:12px}
+.history-title{font-size:13px;font-weight:500;color:var(--muted)}
+.clear-btn{font-size:12px;color:var(--subtle);padding:3px 8px;
+  border:1px solid var(--border);border-radius:var(--radius-sm)}
+.clear-btn:hover{color:var(--red);border-color:var(--red)}
+.history-list{display:flex;flex-direction:column;gap:8px}
+.hist-item{display:flex;align-items:center;gap:12px;padding:11px 14px;
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--surface);transition:var(--transition)}
+.hist-item:hover{border-color:var(--subtle)}
+.hist-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px}
+.hist-badge.done{background:rgba(82,196,26,.15);color:var(--green)}
+.hist-badge.error{background:rgba(255,77,79,.15);color:var(--red)}
+.hist-badge.running{background:rgba(255,208,68,.15);color:var(--accent)}
+.hist-topic{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-tpl{font-size:11px;color:var(--muted)}
+.hist-time{font-size:11px;color:var(--subtle)}
+.hist-dl{font-size:12px;color:var(--accent2);padding:3px 8px;
+  border:1px solid rgba(74,158,255,.3);border-radius:var(--radius-sm)}
+.hist-dl:hover{background:rgba(74,158,255,.1)}
+.empty-hist{text-align:center;padding:24px;color:var(--subtle);font-size:13px}
+
+/* ── Misc ─────────────────────────────────────────────────────────────────── */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.hidden{display:none!important}
+.tag{font-size:11px;padding:2px 8px;border-radius:4px;font-weight:500;display:inline-block}
+.tag-new{background:rgba(74,158,255,.15);color:var(--blue)}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<header>
+  <div class="logo">✦ Video Gen <span>v2</span> <em>本地部署</em></div>
+  <div class="hdr-btns">
+    <span id="api-status"><span class="status-dot" id="dot"></span><span id="status-label">检查中…</span></span>
+    <a class="hdr-btn" href="/docs" target="_blank">📖 API 文档</a>
+  </div>
+</header>
+
+<!-- ── Mode tabs ──────────────────────────────────────────────────────────── -->
+<div class="mode-tabs">
+  <button class="mode-tab on"  onclick="setMode('ai')">🤖 AI 主题</button>
+  <button class="mode-tab"     onclick="setMode('script')">📝 自定义脚本</button>
+  <button class="mode-tab"     onclick="setMode('mixed')">✨ 混合嵌入 <span class="tag tag-new">新</span></button>
+  <button class="mode-tab"     onclick="setMode('demo')">🎯 快速演示</button>
+</div>
+
+<!-- ── Input card ─────────────────────────────────────────────────────────── -->
+<div class="card">
+
+  <!-- AI mode -->
+  <div id="panel-ai" class="mode-panel on">
+    <div class="field">
+      <label>对话主题</label>
+      <input class="inp" id="topic" placeholder="例如：在便利店偶遇朋友、职场开会、机场值机…"
+             onkeydown="if(event.key==='Enter')generate()">
+    </div>
+    <div style="font-size:12px;color:var(--muted)">
+      AI 将自动生成 8-12 轮生活对话 + 提取关键词 + 配音
+    </div>
+  </div>
+
+  <!-- Script mode -->
+  <div id="panel-script" class="mode-panel">
+    <div class="field">
+      <label>自定义 JSON 脚本</label>
+      <textarea class="inp" id="script-json" rows="8"
+        placeholder='{
+  "title": "职场英语",
+  "scenes": [
+    {"zh": "今天你迟到了", "en": "YOU ARE LATE", "duration": 3.5},
+    {
+      "zh": "你必须",
+      "en": "",
+      "speaker": "老板",
+      "duration": 4.0,
+      "keyword": {"word": "FIX IT", "meaning": "解决它"}
+    }
+  ]
+}'></textarea>
+    </div>
+  </div>
+
+  <!-- Mixed mode -->
+  <div id="panel-mixed" class="mode-panel">
+    <div class="field">
+      <label>混合中英文段落（英文关键词自动高亮为黄色框）</label>
+      <textarea class="inp" id="mixed-text" rows="3"
+        placeholder="例如：fix，如果这次launch再出error，你全年的bonus肯定泡汤！"></textarea>
+    </div>
+    <div class="field">
+      <label>关键词定义</label>
+      <div id="words-list"></div>
+      <button class="add-word-btn" onclick="addWord()">+ 添加关键词</button>
+    </div>
+    <div id="slide-2" class="hidden" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <div class="field">
+        <label>第二段落（可选）</label>
+        <textarea class="inp" id="mixed-text-2" rows="2"
+          placeholder="例如：我要看到concrete plan，否则你自己跟board解释！"></textarea>
+      </div>
+      <div class="field">
+        <label>第二段关键词</label>
+        <div id="words-list-2"></div>
+        <button class="add-word-btn" onclick="addWord(2)">+ 添加关键词</button>
+      </div>
+    </div>
+    <button class="add-word-btn" style="margin-top:10px;border-color:var(--border);color:var(--muted)"
+      onclick="toggleSlide2()">⊕ 添加第二段落</button>
+  </div>
+
+  <!-- Demo mode -->
+  <div id="panel-demo" class="mode-panel">
+    <div style="font-size:13px;color:var(--muted);line-height:1.8">
+      使用内置演示数据，无需 API Key，立即出片验证环境。<br>
+      场景：老板在职场暴怒，混合中英词汇高亮。
+    </div>
+  </div>
+
+</div><!-- end input card -->
+
+<!-- ── Settings ────────────────────────────────────────────────────────────── -->
+<div class="row2">
+  <!-- Template -->
+  <div class="card">
+    <div class="card-title">视频模板</div>
+    <div class="template-grid">
+
+      <div class="tpl-card on" data-tpl="english_learning" onclick="setTpl(this)">
+        <div class="tpl-preview dark">
+          <div class="tv-el">
+            <span class="tv-zh">今天你迟到了</span>
+            <div class="tv-sep"></div>
+            <span class="tv-kw">FIX IT</span>
+          </div>
+        </div>
+        <div class="tpl-name">电影字幕</div>
+        <div class="tpl-desc">暗色 · 关键词发光</div>
+      </div>
+
+      <div class="tpl-card" data-tpl="podcast" onclick="setTpl(this)">
+        <div class="tpl-preview dark">
+          <div class="tv-pod">
+            <div class="tv-avs">
+              <div class="tv-av" style="background:#4a9eff;color:#fff">A</div>
+              <div class="tv-av" style="background:#444">B</div>
+            </div>
+            <div class="tv-wave">
+              <div class="tv-bar" style="height:6px"></div>
+              <div class="tv-bar" style="height:10px"></div>
+              <div class="tv-bar" style="height:14px"></div>
+              <div class="tv-bar" style="height:8px"></div>
+              <div class="tv-bar" style="height:12px"></div>
+              <div class="tv-bar" style="height:4px"></div>
+            </div>
+          </div>
+        </div>
+        <div class="tpl-name">播客对话</div>
+        <div class="tpl-desc">双人 · 波形动画</div>
+      </div>
+
+      <div class="tpl-card" data-tpl="tiktok" onclick="setTpl(this)">
+        <div class="tpl-preview dark">
+          <div class="tv-tt">
+            <span style="font-size:8px;color:#aaa">截止日期快到了</span>
+            <span class="tv-big" style="color:#ffd044">DEADLINE</span>
+          </div>
+        </div>
+        <div class="tpl-name">TikTok</div>
+        <div class="tpl-desc">大字 · 循环配色</div>
+      </div>
+
+      <div class="tpl-card" data-tpl="mixed_inline" onclick="setTpl(this)">
+        <div class="tpl-preview light">
+          <div class="tv-mx">
+            <div class="tv-card">
+              <div class="tv-inline">
+                <div class="tv-box">fix</div>
+                <span class="tv-zh2">如果这次</span>
+                <div class="tv-box">launch</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tpl-name">混合嵌入</div>
+        <div class="tpl-desc">白卡 · 内嵌黄框</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Voice -->
+  <div class="card">
+    <div class="card-title">TTS 声音</div>
+    <div class="voice-grid">
+      <div class="voice-chip on" data-voice="en" onclick="setVoice(this)">
+        <div class="vc-name">Emma ♀</div>
+        <div class="vc-lang">英文 · 自然</div>
+      </div>
+      <div class="voice-chip" data-voice="en-m" onclick="setVoice(this)">
+        <div class="vc-name">Andrew ♂</div>
+        <div class="vc-lang">英文 · 男声</div>
+      </div>
+      <div class="voice-chip" data-voice="teacher" onclick="setVoice(this)">
+        <div class="vc-name">Jenny ♀</div>
+        <div class="vc-lang">英文 · 教学</div>
+      </div>
+      <div class="voice-chip" data-voice="zh" onclick="setVoice(this)">
+        <div class="vc-name">晓晓 ♀</div>
+        <div class="vc-lang">中文 · 温柔</div>
+      </div>
+      <div class="voice-chip" data-voice="zh-m" onclick="setVoice(this)">
+        <div class="vc-name">云希 ♂</div>
+        <div class="vc-lang">中文 · 男声</div>
+      </div>
+      <div class="voice-chip" data-voice="ja" onclick="setVoice(this)">
+        <div class="vc-name">七海 ♀</div>
+        <div class="vc-lang">日语</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Generate button ─────────────────────────────────────────────────────── -->
+<button class="gen-btn" id="gen-btn" onclick="generate()">
+  🎬  开始生成视频
+</button>
+
+<!-- ── Output panel ────────────────────────────────────────────────────────── -->
+<div id="output" style="margin-top:16px">
+  <div class="status-bar">
+    <div class="spin" id="spin"></div>
+    <div class="status-txt" id="status-txt">初始化中…</div>
+    <div class="elapsed" id="elapsed"></div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <div class="video-box" id="video-box">
+    <div class="video-placeholder">⏳ 等待渲染完成…</div>
+  </div>
+  <div class="out-actions">
+    <button class="action-btn primary hidden" id="dl-btn" onclick="doDownload()">⬇ 下载 MP4</button>
+    <button class="action-btn secondary" onclick="resetOutput()">🔄 重新生成</button>
+  </div>
+</div>
+
+<!-- ── History ─────────────────────────────────────────────────────────────── -->
+<div style="margin-top:28px">
+  <div class="history-header">
+    <span class="history-title">📋 生成历史</span>
+    <button class="clear-btn" onclick="clearHistory()">清空</button>
+  </div>
+  <div id="history-list" class="history-list"></div>
+</div>
+
+</div><!-- end #app -->
+
+<script>
+// ── State ───────────────────────────────────────────────────────────────────
+const API = (location.protocol === 'file:') ? 'http://localhost:8000' : '';
+let mode     = 'ai';
+let template = 'english_learning';
+let voice    = 'en';
+let pollTimer = null;
+let startTime = 0;
+let tickTimer = null;
+let currentJobId = null;
+
+// ── API health check ────────────────────────────────────────────────────────
+async function checkHealth(){
+  try{
+    const r = await fetch(API+'/health',{signal:AbortSignal.timeout(3000)});
+    if(r.ok){
+      document.getElementById('dot').classList.add('ok');
+      document.getElementById('status-label').textContent='后端运行中';
+    }
+  }catch{
+    document.getElementById('status-label').textContent='后端未连接';
+  }
+}
+checkHealth(); setInterval(checkHealth,15000);
+
+// ── Mode ────────────────────────────────────────────────────────────────────
+function setMode(m){
+  mode=m;
+  document.querySelectorAll('.mode-tab').forEach((t,i)=>{
+    t.classList.toggle('on', ['ai','script','mixed','demo'][i]===m);
+  });
+  document.querySelectorAll('.mode-panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById('panel-'+m).classList.add('on');
+}
+
+// ── Template ────────────────────────────────────────────────────────────────
+function setTpl(el){
+  template=el.dataset.tpl;
+  document.querySelectorAll('.tpl-card').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  // Auto-switch mode for mixed_inline
+  if(template==='mixed_inline' && mode!=='mixed' && mode!=='demo'){
+    setMode('mixed');
+  }
+}
+
+// ── Voice ───────────────────────────────────────────────────────────────────
+function setVoice(el){
+  voice=el.dataset.voice;
+  document.querySelectorAll('.voice-chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+}
+
+// ── Words builder (mixed mode) ───────────────────────────────────────────────
+let wordCount=0, wordCount2=0;
+
+function addWord(para=1){
+  const listId = para===2 ? 'words-list-2' : 'words-list';
+  const id = `word-${Date.now()}`;
+  const row = document.createElement('div');
+  row.className='word-row'; row.id=id;
+  row.innerHTML=`
+    <input class="inp" placeholder="单词 / 短语" data-key="word">
+    <input class="inp" placeholder="词性" data-key="pos">
+    <input class="inp" placeholder="中文释义" data-key="meaning">
+    <button class="del-btn" onclick="this.closest('.word-row').remove()">×</button>`;
+  document.getElementById(listId).appendChild(row);
+}
+
+function toggleSlide2(){
+  const el=document.getElementById('slide-2');
+  el.classList.toggle('hidden');
+}
+
+function getWords(listId){
+  const rows=document.querySelectorAll('#'+listId+' .word-row');
+  return Array.from(rows).map(r=>({
+    word:    r.querySelector('[data-key=word]').value.trim(),
+    pos:     r.querySelector('[data-key=pos]').value.trim(),
+    meaning: r.querySelector('[data-key=meaning]').value.trim(),
+  })).filter(w=>w.word);
+}
+
+// ── Build request ────────────────────────────────────────────────────────────
+function buildRequest(){
+  if(mode==='demo')    return {mode:'mixed-multi', template, voice, data:{}};
+  if(mode==='ai')      return {mode:'ai', topic:document.getElementById('topic').value.trim(), template, voice, data:{}};
+  if(mode==='script'){
+    try{
+      const data=JSON.parse(document.getElementById('script-json').value||'{}');
+      return {mode:'script', template, voice, data};
+    }catch(e){ alert('JSON 格式错误: '+e.message); return null; }
+  }
+  if(mode==='mixed'){
+    const t1=document.getElementById('mixed-text').value.trim();
+    const t2=document.getElementById('mixed-text-2')?.value.trim()||'';
+    const w1=getWords('words-list');
+    const w2=getWords('words-list-2');
+    if(!t1){ alert('请输入第一段文字'); return null; }
+    const paragraphs=[{text:t1,words:w1,slide:t2?'1/2':'1/1'}];
+    if(t2) paragraphs.push({text:t2,words:w2,slide:'2/2'});
+    return {mode:'mixed', template:'mixed_inline', voice, data:{paragraphs}};
+  }
+}
+
+// ── Generate ─────────────────────────────────────────────────────────────────
+async function generate(){
+  const req=buildRequest(); if(!req) return;
+
+  // Validate
+  if(mode==='ai' && !req.topic){ document.getElementById('topic').focus(); return; }
+
+  setGenerating(true);
+  showOutput();
+  setStatus('pending','📡 发送请求…',2);
+
+  try{
+    const r=await fetch(API+'/generate',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(req),
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const {job_id}=await r.json();
+    currentJobId=job_id;
+    startPolling(job_id, req);
+  }catch(e){
+    setStatus('error','❌ 连接失败: '+e.message,0);
+    showError('无法连接后端。请确认 python server.py 已运行。');
+    setGenerating(false);
+  }
+}
+
+// ── Polling ──────────────────────────────────────────────────────────────────
+function startPolling(jobId, req){
+  startTime=Date.now();
+  startTick();
+  setStatus('running','⚙️  渲染中…',20);
+
+  pollTimer=setInterval(async()=>{
+    try{
+      const r=await fetch(API+'/status/'+jobId);
+      const data=await r.json();
+      if(data.status==='done'){
+        clearInterval(pollTimer); stopTick();
+        setStatus('done','✅  生成完成！'+data.message,100);
+        showVideo(jobId);
+        saveHistory(jobId, req, 'done');
+        setGenerating(false);
+      } else if(data.status==='error'){
+        clearInterval(pollTimer); stopTick();
+        setStatus('error','❌  生成失败',0);
+        showError(data.message||'未知错误');
+        saveHistory(jobId, req, 'error');
+        setGenerating(false);
+      } else {
+        // Fake progress: ramp up to 90% over ~90s
+        const elapsed=(Date.now()-startTime)/1000;
+        const pct=Math.min(90, 5 + elapsed * 0.9);
+        setStatus('running','⚙️  渲染中… 每10秒视频约需15-30秒', pct);
+      }
+    }catch(e){ /* network hiccup, retry next tick */ }
+  },2000);
+}
+
+// ── Status helpers ────────────────────────────────────────────────────────────
+function showOutput(){
+  document.getElementById('output').style.display='block';
+  document.getElementById('spin').style.display='block';
+  document.getElementById('dl-btn').classList.add('hidden');
+  document.getElementById('video-box').innerHTML='<div class="video-placeholder">⏳ 等待渲染完成…</div>';
+}
+
+function setStatus(state, txt, pct){
+  document.getElementById('status-txt').textContent=txt;
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('spin').style.display=(state==='running'||state==='pending')?'block':'none';
+}
+
+function showError(msg){
+  document.getElementById('video-box').innerHTML=`<div class="error-box" style="width:100%">⚠ ${msg}</div>`;
+}
+
+function showVideo(jobId){
+  const url=API+'/download/'+jobId;
+  document.getElementById('video-box').innerHTML=`
+    <video controls autoplay muted playsinline
+      style="max-width:100%;max-height:420px">
+      <source src="${url}" type="video/mp4">
+    </video>`;
+  document.getElementById('dl-btn').classList.remove('hidden');
+  document.getElementById('dl-btn').dataset.url=url;
+}
+
+function doDownload(){
+  const url=document.getElementById('dl-btn').dataset.url;
+  const a=document.createElement('a'); a.href=url;
+  a.download='video_'+currentJobId+'.mp4'; a.click();
+}
+
+function resetOutput(){
+  clearInterval(pollTimer); stopTick();
+  document.getElementById('output').style.display='none';
+  setGenerating(false);
+}
+
+// ── Tick timer ────────────────────────────────────────────────────────────────
+function startTick(){
+  tickTimer=setInterval(()=>{
+    const s=Math.floor((Date.now()-startTime)/1000);
+    document.getElementById('elapsed').textContent=s+'s';
+  },500);
+}
+function stopTick(){ clearInterval(tickTimer); }
+
+// ── UI state ──────────────────────────────────────────────────────────────────
+function setGenerating(on){
+  const btn=document.getElementById('gen-btn');
+  btn.disabled=on;
+  btn.textContent=on ? '⏳  生成中…' : '🎬  开始生成视频';
+}
+
+// ── History ───────────────────────────────────────────────────────────────────
+function saveHistory(jobId, req, status){
+  const hist=JSON.parse(localStorage.getItem('vg_history')||'[]');
+  const label=req.topic||req.data?.title||req.mode;
+  hist.unshift({jobId,label,template:req.template||'mixed',status,ts:Date.now()});
+  localStorage.setItem('vg_history', JSON.stringify(hist.slice(0,20)));
+  renderHistory();
+}
+
+function renderHistory(){
+  const hist=JSON.parse(localStorage.getItem('vg_history')||'[]');
+  const el=document.getElementById('history-list');
+  if(!hist.length){ el.innerHTML='<div class="empty-hist">暂无记录</div>'; return; }
+  el.innerHTML=hist.map(h=>`
+    <div class="hist-item">
+      <span class="hist-badge ${h.status}">${h.status==='done'?'完成':h.status==='error'?'失败':'进行中'}</span>
+      <span class="hist-topic">${h.label||'未命名'}</span>
+      <span class="hist-tpl">${h.template}</span>
+      <span class="hist-time">${timeAgo(h.ts)}</span>
+      ${h.status==='done'?`<a class="hist-dl" href="${API}/download/${h.jobId}" download>⬇</a>`:''}
+    </div>`).join('');
+}
+
+function clearHistory(){
+  localStorage.removeItem('vg_history'); renderHistory();
+}
+
+function timeAgo(ts){
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60) return s+'s前';
+  if(s<3600) return Math.floor(s/60)+'min前';
+  return Math.floor(s/3600)+'h前';
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+addWord(); // start with one word row in mixed mode
+renderHistory();
+
+// Demo: pre-fill mixed mode words on load
+const demoWords=[
+  ['fix','v.','修复'],['launch','n./v.','上线'],['error','n.','错误'],['bonus','n.','奖金']
+];
+</script>
+</body>
+</html>

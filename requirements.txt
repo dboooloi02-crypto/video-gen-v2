@@ -1,0 +1,20 @@
+# ── Core video rendering ──────────────────────────────────────────────────────
+moviepy>=1.0.3
+Pillow>=9.0.0
+numpy>=1.21.0
+
+# ── AI dialogue generation ────────────────────────────────────────────────────
+openai>=1.0.0          # OpenAI-compatible client (works with ZhipuAI, DeepSeek, etc.)
+
+# ── TTS ───────────────────────────────────────────────────────────────────────
+edge-tts>=6.1.9        # Microsoft Edge TTS with word-boundary events
+
+# ── ASR (optional — only needed for Whisper word timing) ─────────────────────
+# openai-whisper>=20231117   # uncomment to enable Whisper timeline
+# torch>=2.0.0               # required by whisper
+
+# ── Audio concatenation (optional) ───────────────────────────────────────────
+# pydub>=0.25.1              # uncomment if you want merged single-track audio
+
+# ── Dev / testing ────────────────────────────────────────────────────────────
+# pytest>=7.0.0
